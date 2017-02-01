@@ -1,0 +1,779 @@
+swagger: '2.0'
+info:
+  title: Network Connected Kiln Controller API
+  description: An API for managing kilns from the convenience of your favourite device
+  version: 0.0.1
+  contact:
+      name: Evan Wills
+      url: http://www.picklejar.com.au/nckc-api
+      email: evan.wills@picklejar.com.au
+  license:
+    name: GPL 2.0
+    url: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+# the domain of the service
+host: nckcapi.picklejar.com.au
+# array of all schemes that your API supports
+schemes:
+  - https
+# will be prefixed to all paths
+basePath: /v0.0.1
+produces:
+  - application/json
+
+
+# ====================================================================
+# START: Paths
+
+paths:
+
+
+# --------------------------------------------------------------------
+# START PATH: /firing
+
+
+  /firing:
+    post:
+      summary: Request a firing in a specific kiln
+      description: Provide all details for a firing plan
+      parameters:
+      - name: name
+        in: formData
+        required: true
+        description: Name of the firing (probably should be something meaningful)
+        type: string
+      - name: information
+        in: formData
+        required: false
+        description: |
+          Info about the purpose of the firing including about using a
+          firing plan differently to its original intent.
+        type: string
+      - name: isBisque
+        in: formData
+        required: true
+        description: Is this plan intended to be for a bisque/first firing
+        type: boolean
+      - name: isReduction
+        in: formData
+        required: true
+        description: Is this plan intended to be used in reduction kiln
+        type: boolean
+      - name: userID
+        in: formData
+        required: true
+        description: The UID of the user the firing is for (if not the person submitting the post)
+        type: integer
+        format: int32
+      - name: firingPlanID
+        in: formData
+        required: true
+        description: firing plan to be used for this firing
+        type: integer
+        format: int32
+      - name: kilnID
+        in: formData
+        required: true
+        description: firing plan to be used for this firing
+        type: integer
+        format: int32
+      - name: minCoolOpenTemp
+        in: formData
+        required: false
+        description: |
+          The minimum temperature the kiln needs be (when cooling)
+          before it can be opened
+        type: integer
+        format: int32
+      - name: packingTime
+        in: formData
+        required: true
+        description: estimated time (in seconds) the user needs to pack the kiln
+        type: integer
+        format: int32
+      - name: startTime
+        in: formData
+        required: false
+        description: The time the firing will start.
+        type: string
+        format: date-time
+      responses:
+        200:
+          description: New firing plan added
+          schema:
+            $ref: '#/definitions/FiringDetails'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+
+#  END PATH:  /firing
+# --------------------------------------------------------------------
+# START PATH: /firing/{firingID}
+
+
+  /firing/{firingID}:
+    get:
+      description: get info about a firing
+      parameters:
+      - name: firingID
+        in: path
+        required: true
+        description: the UID of the firing
+        type: integer
+        format: int32
+      - name: noLogs
+        in: query
+        required: false
+        description: don't include the logs
+        default: false
+        type: boolean
+        format: int32
+      - name: logsOnly
+        in: query
+        required: false
+        description: Only return the logs
+        default: false
+        type: boolean
+        format: int32
+      - name: logType
+        in: query
+        required: false
+        description: limit the type of logs (NOTE&colon; this parameter only makes sense if "noLogs" is false
+        default:
+        type: array
+        items:
+          type: string
+          enum:
+          - error
+          - firingDetails
+          - temperature
+          - power/fuel
+          - door
+          - bungs
+          - damper
+          - primary air
+          - notes
+          - other
+      responses:
+        200:
+          description: All details about a firing
+          scheme:
+            $ref: '#/definitions/FiringDetails'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+    put:
+      summary: update info about firing plan
+      description: |
+        Once a firing has been requested, the user and the kiln cannot
+        be changed (although this could be subject to variation per
+        organisation). Once a firing has commenced nothing can be
+        updated, only logs can be added to.
+      parameters:
+      - name: firingID
+        in: path
+        required: true
+        description: the UID of the firing plan to be used.
+        type: integer
+        format: int32
+      - name: name
+        in: formData
+        required: true
+        description: Name of the firing (probably should be something meaningful)
+        type: string
+      - name: information
+        in: formData
+        required: false
+        description: |
+          Info about the purpose of the firing including about using a
+          firing plan differently to its original intent.
+        type: string
+      - name: isBisque
+        in: formData
+        required: true
+        description: Is this plan intended to be for a bisque/first firing
+        type: boolean
+      - name: isReduction
+        in: formData
+        required: true
+        description: Is this plan intended to be used in reduction kiln
+        type: boolean
+      - name: firingPlanID
+        in: formData
+        required: true
+        description: firing plan to be used for this firing
+        type: integer
+        format: int32
+      - name: minCoolOpenTemp
+        in: formData
+        required: false
+        description: |
+          The minimum temperature the kiln needs be (when cooling)
+          before it can be opened
+        type: integer
+        format: int32
+      - name: packingTime
+        in: formData
+        required: true
+        description: estimated time (in seconds) the user needs to pack the kiln
+        type: integer
+        format: int32
+      - name: startTime
+        in: formData
+        required: false
+        description: The time the firing will start.
+        type: string
+        format: date-time
+      - name: status
+        in: formData
+        required: false
+        description: Approval status of the firing request
+        type: string
+        enum:
+        - rejected
+        - reschedule
+        - canceled
+        - withdrawn
+        - unapproved
+        - approved
+      - name: statusNotes
+        type: string
+        description: |
+          Approval Status Notes are required if appoval status is
+          included but not equal to "approved"
+      responses:
+        200:
+          description: Firing plan updated
+          schema:
+              $ref: '#/definitions/FiringDetails'
+        400:
+          description: |
+            Some details of firing plan cannot be changed after it has
+            been scheduled for use.
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+    delete:
+      description: |
+        Delete a firing. NOTE&colon; If a firing has completed and
+        unpacked, it can be archived (but not deleted). If a firing is
+        in progress, it can neither be deleted nor archived.
+      parameters:
+      - name: firingID
+        in: path
+        required: true
+        description: the UID of the firing plan to be used.
+        type: integer
+        format: int32
+      responses:
+        200:
+          description: Firing request has been deleted (or archived).
+        403:
+          description: |
+            Firing is in progress. It can neither be deleted nor archived
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+
+#  END PATH:  /firing/{firingID}
+# --------------------------------------------------------------------
+# START PATH: /firing/{listType}/{firingID}
+
+
+  /firings/{listType}/{idType}/{id}:
+    get:
+      description: List firings
+      parameters:
+      - name: listType
+        in: path
+        required: true
+        type: string
+        enum:
+        - history
+        - queue
+        - now
+        - unapproved
+      - name: idType
+        in: path
+        required: false
+        type: string
+        enum:
+        - kiln
+        - user
+        - firing
+        - plan
+        - error
+        - unapproved
+      - name: id
+        description: if {idType} is specified, then ID is required
+        in: path
+        required: false
+        type: integer
+        format: int32
+      - name: maxTemp
+        in: query
+        required: false
+        description: the maximum temperature the firing will achieve
+        type: integer
+        format: int32
+      - name: duration
+        in: query
+        required: false
+        description: number of seconds the firing is expected to take
+        type: integer
+        format: int32
+      - name: range
+        in: query
+        required: false
+        description: |
+          Name of the firing range this plan fits within
+          e.g. eathernware or stoneware
+        type: string
+        enum:
+        - on-glaze (450-750)
+        - raku (750-950)
+        - eathernware (950 - 1150)
+        - midfire (1150 - 1250)
+        - stonware (1250 - 1300)
+        - porcelain (1300 - 1350)
+      - name: isBisque
+        in: query
+        required: false
+        description: Is this plan intended to be used in bisque/first firing
+        type: boolean
+      - name: isReduction
+        in: query
+        required: false
+        description: Is this plan intended to be used in reduction kiln
+        type: boolean
+      - name: approvalStatus
+        in: query
+        required: false
+        type: string
+        enum:
+        - rejected
+        - reschedule
+        - canceled
+        - withdrawn
+        - unapproved
+        - approved
+      - name: createdBy
+        in: query
+        required: false
+        type: object
+        schema:
+          $ref: '#/definitions/BasicUserItem'
+      - name: approvedBy
+        in: query
+        required: false
+        type: object
+        schema:
+          $ref: '#/definitions/BasicUserItem'
+      - name: usedBy
+        description: User who used this firing plan
+        in: query
+        required: false
+        type: object
+        schema:
+          $ref: '#/definitions/BasicUserItem'
+      - name: orderBy
+        description: Which fields to order the results by
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/FiringOrderBy'
+      - name: filterBy
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/rangeFilter'
+
+      - name: offset
+        in: query
+        type: integer
+        format: int32
+        default: 0
+        description: Offset the list of returned results by this amount. Default is zero.
+      - name: limit
+        in: query
+        type: integer
+        format: int32
+        default: 10
+        description: Number of items to retrieve. Default is 10, maximum is 100.
+
+      responses:
+        200:
+          description: List of firings
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringBasic'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+
+#  END PATH:  /firing/{listType}/{firingID}
+# --------------------------------------------------------------------
+
+# END: paths
+# ====================================================================
+# START: Definitions
+
+
+definitions:
+
+
+# --------------------------------------------------------------------
+# START DEFINITIONS: FiringBasic
+
+  FiringBasic:
+    type: object
+    properties:
+      id:
+        description: UID for firing plan
+        type: integer
+        format: int32
+      name:
+        description: Name of the firing
+        type: string
+      maxTemp:
+        description: the maximum temperature the firing will achieve
+        type: integer
+        format: int32
+      duration:
+        description: number of seconds the firing is expected to take
+        type: integer
+        format: int32
+      range:
+        description: Name of the firing range this plan fits within e.g. eathernware or stoneware
+        type: string
+        enum:
+        - on-glaze (450-750)
+        - raku (750-950)
+        - eathernware (950 - 1150)
+        - midfire (1150 - 1250)
+        - stonware (1250 - 1300)
+        - porcelain (1300 - 1350)
+      isBisque:
+        description: Is this plan intended to be used in bisque/first firing
+        type: boolean
+      isReduction:
+        description: Is this plan intended to be used in reduction kiln
+        type: boolean
+      approvalStatus:
+        type: string
+        enum:
+        - rejected
+        - reschedule
+        - canceled
+        - withdrawn
+        - unapproved
+        - approved
+
+#  END DEFINITIONS:  FiringBasic
+# --------------------------------------------------------------------
+# START DEFINITIONS: FiringListing
+
+  FiringListing:
+    type: object
+    description: List of firings matching query containing basic info about each firing
+    properties:
+      offset:
+        type: integer
+        format: int32
+        description: Position in pagination.
+      limit:
+        type: integer
+        format: int32
+        description: Number of items to retrieve (100 max).
+      count:
+        type: integer
+        format: int32
+        description: Total number of items available.
+      firings:
+        type: array
+        items:
+          $ref: '#/definitions/FiringBasic'
+
+#  END DEFINITIONS:  FiringListing
+# --------------------------------------------------------------------
+# START DEFINITIONS: FiringLogEntry
+
+  FiringLogEntry:
+    type: object
+    description: |
+      Individual step in the firing plan. A concrete point along the
+      firing path where the kiln should be at a certain temperature at
+      a specific time after the firing started
+    required:
+    - seconds
+    - type
+    - value
+    - user
+    properties:
+      seconds:
+        type: integer
+        format: int32
+        description: |
+          The number of seconds after the fring started the kiln
+          should be at a given temperature
+          NOTE: for pre-firing entries like approval, seconds from
+          start doesn't make sense so Unix Time Stamp is used instead
+      type:
+        type: string
+        enum:
+        - error
+        - temperature
+        - power/fuel
+        - door
+        - bungs
+        - damper
+        - primary air
+        - notes
+        - modifications
+        - approvalStatus
+        - approvalStatusNotes
+        - other
+        description: |
+          The temperature (number of degrees) the kiln should be at a
+          given number of seconds after the fring started
+      value:
+        description: |
+          The value/content of the log entry
+        type: string
+      user:
+        type: string
+        description: |
+          UID of user making the entry (could be kiln computer - K[kilnID] or human user - U[userID])
+        pattern: ^[KU][0-9]+$
+
+#  END DEFINITIONS:  FiringLogEntry
+# --------------------------------------------------------------------
+# START DEFINITIONS: PlanDetails
+
+  FiringDetails:
+    description: Everything you need to know about this firing
+    type: object
+    properties:
+      id:
+        description: UID for firing plan
+        type: integer
+        format: int32
+      name:
+        description: Name of the firing
+        type: string
+      maxTemp:
+        description: the maximum temperature the firing will achieve (NOTE&colon; maxTemp is derived from information in the steps)
+        type: integer
+        format: int32
+      duration:
+        description: number of seconds the firing is expected to take (NOTE&colon; duration is calculated from information in the steps)
+        type: integer
+        format: int32
+      range:
+        description: |
+          Name of the firing range this plan fits within
+          e.g. eathernware or stoneware
+        type: string
+        enum:
+        - on-glaze (450-750)
+        - raku (750-950)
+        - eathernware (950 - 1150)
+        - midfire (1150 - 1250)
+        - stonware (1250 - 1300)
+        - porcelain (1300 - 1350)
+      isBisque:
+        description: |
+          Is this plan intended to be used in bisque/first firing
+        type: boolean
+      isReduction:
+        description: |
+          Is this plan intended to be used in reduction kiln
+        type: boolean
+      createdBy:
+#        description: user who created the plan
+#        type: object
+        $ref: '#/definitions/BasicUserItem'
+      createdDateTime:
+        description: when the plan was created
+        type: string
+        format: date-time
+      approvedBy:
+#        description: user who approved the plan
+#        type: object
+        $ref: '#/definitions/BasicUserItem'
+      approvedDateTime:
+        description: when the plan was approved
+        type: string
+        format: date-time
+      approvalStatus:
+        description: |
+          The status of the firing
+        type: string
+        enum:
+        - rejected
+        - reschedule
+        - canceled
+        - withdrawn
+        - unapproved
+        - approved
+      lastUpdatedBy:
+#        description: user who approved the plan
+#        type: object
+        $ref: '#/definitions/BasicUserItem'
+      lastUpdatedDateTime:
+        description: when the plan was last updated
+        type: string
+        format: date-time
+      usageCount:
+        description: how many times has this program been used (in completed firings)
+        type: integer
+        format: int32
+      description:
+        description: Detiailed description of the firing's purpose and intent
+        type: string
+      summary:
+        description: Brief description of the firing's purpose and intent
+        type: string
+      firingLogEntry:
+        description: Each individual step in the firing plan
+        type: array
+        items:
+          $ref: '#/definitions/FiringLogEntry'
+
+#  END DEFINITIONS:  PlanDetails
+# --------------------------------------------------------------------
+# START DEFINITIONS: BasicUserItem
+
+  BasicUserItem:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int32
+      name:
+        type: string
+        description: Name of the kiln.
+      url:
+        type: string
+        description: URL for the kiln
+      type:
+        type: string
+        description: type of user
+
+#  END DEFINITIONS:  BasicUserItem
+# --------------------------------------------------------------------
+# START DEFINITIONS: rangeFilter
+
+  rangeFilter:
+    type: object
+    properties:
+      fieldName:
+        description: name of the field to be used in the range filter
+        type: string
+        enum:
+        - maxTemp
+        - duration
+        - startDateTime
+        - completedDateTime
+        - openDateTime
+        - createdDateTime
+        - approvedDateTime
+      type:
+        description: The type of value
+        type: string
+        enum:
+        - string
+        - int32
+        - int64
+        - date
+        - date-time
+      min:
+        description: Minimum value in the range
+        type: string
+      max:
+        description: Maximum value in the range
+        type: string
+
+#  END DEFINITIONS:  rangeFilter
+# --------------------------------------------------------------------
+# START DEFINITIONS: FiringOrderBy
+
+  FiringOrderBy:
+    type: object
+    required:
+    - field
+    - order
+    properties:
+      field:
+        description: name of the fild to be used to order by
+        type: string
+        enum:
+        - name
+        - maxTemp
+        - duration
+        - range
+        - isBisque
+        - isReduction
+        - createdBy
+        - approvedBy
+        - isApproved
+        - createdDate
+        - createdByUserID
+        - createdByUserFirstName
+        - createdByUserLastName
+        - createdByUserType
+        - approvedDate
+        - approvedByUserID
+        - approvedByUserFirstName
+        - approvedByUserLastName
+        - parentPlanID
+      order:
+        description: Either order in decending or ascending rank
+        type: string
+        enum:
+        - ascending
+        - decending
+
+
+#  END DEFINITIONS:  FiringOrderBy
+# --------------------------------------------------------------------
+
+
+
+# --------------------------------------------------------------------
+# START DEFINITIONS: Error
+
+  Error:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields:
+        type: string
+
+#  END DEFINITIONS:  Error
+# --------------------------------------------------------------------
+
+#  END: definitions:
+# ====================================================================

@@ -1,0 +1,1058 @@
+# this is an example of the Uber API
+# as a demonstration of an API spec in YAML
+swagger: '2.0'
+info:
+  title: Network Connected Kiln Controller API
+  description: An API for managing kilns from the convenience of your favourite device
+  version: 0.0.1
+  contact:
+      name: Evan Wills
+      url: http://www.picklejar.com.au/nckc-api
+      email: evan.wills@picklejar.com.au
+  license:
+    name: GPL 2.0
+    url: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+# the domain of the service
+host: nckcapi.picklejar.com.au
+# array of all schemes that your API supports
+schemes:
+  - https
+# will be prefixed to all paths
+basePath: /v0.0.1
+produces:
+  - application/json
+paths:
+  /kiln:
+    post:
+      summary: create new kiln
+      description: Details of new firing requested for a specific kiln
+      parameters:
+      - name: kilnName
+        in: query
+        required: true
+        type: string
+        description: Name of the kiln.
+      - name: code
+        in: query
+        required: true
+        type: string
+        description: code for the kiln.
+      - name: brandID
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: UID of the maker of the kiln
+      - name: packingType
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: |
+          type of kiln [
+            0 = front door,
+            1 = trolly,
+            2 = top hat,
+            3 = coffin/top-loading
+          ]
+      - name: primaryFiringType
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: |
+          type of firings this kiln is built for [
+            0 = oxidation,
+            1 = bisque,
+            2 = glaze,
+            3 = raku,
+            4 = black firing,
+            5 = salt glaze
+          ]
+      - name: fuel
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: |
+          type of fuel the kiln uses [
+            1 = electric (single phase),
+            2 = electric (three phase),
+          	3 = gas,
+          	4 = wood,
+          	5 = oil
+          ]
+      - name: fuelSub
+        in: query
+        required: true
+        type: string
+        description: Subtype of fuel if appropriate
+      - name: lining
+        in: query
+        required: true
+        type: string
+        description: the material the kiln is lined with (insulation)
+      - name: packingVolume
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: packing volume of the kiln (in cubic metres)
+      - name: internalWidth
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: Width of the inside of the kiln (in millimetres)
+      - name: internalDepth
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: depth of the inside of the kiln (in millimetres)
+      - name: internalHeight
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: height of the inside of the kiln (in Millimetres)
+      - name: doorWidth
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: width of the door opening (in millimetres)
+      - name: doorHeight
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: height of the door opening (in millimetres)
+      - name: doorOpeningOffsetX
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: opening offset from the hinge side of the door (in millimetres)
+      - name: doorOpeningOffsetY
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: opening offset from the bottom of the door (in millimetres)
+      - name: ceilingArchRadius
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: radius of the arch of the ceiling of the kiln (in millimetres) (0 for kilns with a flat ceiling)
+      - name: maxTemp
+        in: query
+        required: true
+        type: integer
+        format: int32
+        description: maximum temperature the kiln can be fired to
+      tags:
+        - kiln
+      responses:
+        200:
+          description: New kiln added
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Kiln'
+        400:
+          description: |
+            Kiln doesn't exist or cannot be fired to requested temperature or
+            firing plan is not approved for kiln
+          schema:
+            $ref: '#/definitions/Error'
+        409:
+          description: |
+            kiln code already exists
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /kiln/{kilnID}:
+    get:
+      summary: Information about a particular firing
+      description: |
+        The Firing endpoint returns information about a single firing. If the
+        firing is still underway, it also includes the current status of the
+        firing.
+      parameters:
+        - name: kilnID
+          in: path
+          description: The ID of the kiln to be retrieved
+          required: true
+          type: integer
+          format: int32
+        - name: includeLog
+          in: query
+          description: |
+            include the complete log of the firing. Will return an empty array
+            if firing has not yet started.
+          required: false
+          type: boolean
+      tags:
+        - Kiln
+      responses:
+        200:
+          description: An object containing all info for the kiln
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Kiln'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    put:
+      summary: Update info about a particular kiln
+      description: |
+        The Products endpoint returns information about the *Uber* products
+        offered at a given location. The response includes the display name
+        and other details about each product, and lists the products in the
+        proper display order.
+      parameters:
+        - name: firingID
+          in: path
+          description: The ID of the firing to be retrieved
+          required: true
+          type: integer
+          format: int64
+        - name: kilnID
+          in: query
+          description: The ID of the kiln the firing is/was in
+          required: false
+          type: integer
+          format: int32
+        - name: firingPlanID
+          in: query
+          description: The ID of the firing plan to be used.
+          required: false
+          type: integer
+          format: int32
+        - name: approved
+          in: query
+          description: Has the firing been approved
+          required: false
+          type: boolean
+        - name: approvedTime
+          in: query
+          description: Has the firing been approved
+          required: false
+          type: string
+          format: date-time
+        - name: approverID
+          in: query
+          description: userID of approver
+          required: false
+          type: integer
+          format: int32
+        - name: maxTemp
+          in: query
+          description: The maximum temperature the kiln will fire to
+          required: false
+          type: integer
+          format: int32
+        - name: openTemp
+          in: query
+          description: |
+            The temperature below which the kiln can be opened and
+            emptied.
+          required: false
+          type: integer
+          format: int32
+        - name: startTime
+          in: query
+          description: The time the firing is expected to start.
+          required: false
+          type: string
+          format: date-time
+        - name: openTime
+          in: query
+          description: |
+            The expected time the kiln can be opened. Once the firing is
+            complete this becomes the actual time the kiln was opened for
+            unpacking.
+          required: false
+          type: string
+          format: date-time
+        - name: endTime
+          in: query
+          description: |
+            The expected time the kiln will stop firing (i.e. when it
+            reaches temperature and starts cooling)
+          required: false
+          type: string
+          format: date-time
+        - name: shareableSpace
+          in: query
+          description: |
+            Percentage of the kilns packing space available for others to use
+          required: false
+          type: number
+          format: float
+        - name: kilnStatus
+          in: query
+          description: |
+            Status of -1 = error, firing - 0 = packing, 1 = heating, 2 = cooling, 3 = cooled, 4 = open
+          required: false
+          type: integer
+          format: int32
+        - name: firingStatus
+          in: query
+          description: |
+            Status of firing -
+            -1 = error,
+            0 = not started,
+            1 = heating (as expected),
+            2 = heating (below expected),
+            3 = heating (above expected),
+            4 = success (on target),
+            5 = ended (below target),
+            6 = ended (above target)
+          required: false
+          type: integer
+          format: int32
+      tags:
+        - Firing
+      responses:
+        200:
+          description: An array of products
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Firing'
+        403:
+          description: |
+            Certain firing details cannot be updated while the firing is
+            under way or has completed.
+          schema:
+            $ref: '#/definitions/Error'
+        409:
+          description: |
+            When updating status to "heading", "cooling" or "cooled" request
+            MUST be accompanied with startTime, endTime and openTime
+            parameters respectively.
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Delete specific firing
+      description: |
+        Delete the specific unstarted firing or archive a completed firing. NOTE: if a firing is underway it can neither be deleted, nor archived.
+      parameters:
+        - name: firingID
+          in: path
+          description: The ID of the firing to be deleted/archived
+          required: true
+          type: integer
+          format: int64
+      tags:
+        - Firing
+      responses:
+        200:
+          description: An firing has been delted
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Firing'
+        403:
+          description: |
+            Firing cannot be deleted or archived while it is in progress
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /firing/{firingID}/log:
+    get:
+      summary: Firing log
+      description: |
+        All the information about the firing
+      parameters:
+        - name: firingID
+          in: path
+          description: The ID of the firing to be deleted/archived
+          required: true
+          type: integer
+          format: int64
+        - name: temp
+          in: query
+          description: Return temperature logs (default True)
+          required: false
+          type: boolean
+        - name: power
+          in: query
+          description: Return element power logs (default True)
+          required: false
+          type: boolean
+        - name: errors
+          in: query
+          description: Return error logs (default True)
+          required: false
+          type: boolean
+        - name: other
+          in: query
+          description: Return all other log types (default True)
+          required: false
+          type: boolean
+        - name: lastReceivedID
+          in: query
+          description: |
+            The ID of the last log entry received by the client. Used when the
+            client is getting status updated while a firing is underway.
+          required: false
+          type: integer
+          format: int32
+      tags:
+        - Firing
+      responses:
+        200:
+          description: An array of products
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringLog'
+        404:
+          description: |
+            Firing has not started yet
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Add new firing log entry
+      parameters:
+        - name: firingID
+          in: path
+          description: The ID of the firing to be deleted/archived
+          required: true
+          type: integer
+          format: int64
+        - name: entryID
+          in: query
+          description: ID of log entry
+          required: true
+          type: integer
+          format: int32
+        - name: seconds
+          in: query
+          description: seconds since start of firing
+          required: true
+          type: integer
+          format: int32
+        - name: type
+          in: query
+          description: Type of log entry [0 = temperature, 1 = power, 2 = door, 3 = bungs, 4 = damper, 5 = fuel, 6 = primary air, 7 = details, -1 = error]
+          required: true
+          type: integer
+          format: int32
+        - name: subType
+          in: query
+          description: Sub-Type of log entry (kiln specific info or firing details)
+          required: false
+          type: string
+        - name: value
+          in: query
+          description: Value of entry
+          required: true
+          type: string
+      tags:
+        - Firing
+      responses:
+        200:
+          description: An array of products
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringLogEntry'
+        404:
+          description: Firing has not started yet
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /firing/{firingID}/status:
+    get:
+      summary: Firing status
+      description: |
+        Basic info about the status of the firing
+      parameters:
+        - name: firingID
+          in: path
+          description: The ID of the firing
+          required: true
+          type: integer
+          format: int64
+        - name: count
+          in: query
+          description: the number of entries per type to return
+          required: true
+          type: integer
+          format: int32
+      tags:
+        - Firing
+      responses:
+        200:
+          description: Status of firing (Brings back the most recent entry of each log type except for errors. All error logs are returned.)
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringLog'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /firing/history/:
+    get:
+      summary: List of firings that have already finished
+      description: List of completed firings filtered by query parameters
+      parameters:
+        schema:
+          type: object
+          items:
+            $ref: '#/definitions/FiringList'
+            $ref: '#/definitions/FiringListTimes'
+      tags:
+        - Firing
+      responses:
+        200:
+          description: List of past firings
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringListItem'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Firings
+  /firing/queue/:
+    get:
+      summary: List of firings in queue to happen
+      description: List of upcoming firings filtered by query parameters
+      parameters:
+        schema:
+          type: object
+          items:
+            $ref: '#/definitions/FiringList'
+            $ref: '#/definitions/FiringListTimes'
+      tags:
+        - Firing
+      responses:
+        200:
+          description: List of past firings
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringListItem'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Firings
+  /firing/Now/:
+    get:
+      summary: List of current firings
+      description: List of firings that are currently underway, have just started or Just finished (filtered by query parameters)
+      parameters:
+        schema:
+          type: object
+          items:
+            $ref: '#/definitions/FiringList'
+            $ref: '#/definitions/FiringListTimes'
+      tags:
+        - Firing
+      responses:
+        200:
+          description: List of past firings
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FiringListItem'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Firings
+#  /firingPlan:
+#    post:
+#  /firingPlan/{firingPlanID}:
+#    get:
+#    put:
+#    delete:
+#  /firingPlan/{firingPlanID}/usage:
+#    get:
+#  /firingPlans:
+#    get:
+#  /kiln
+#    post:
+#  /kiln/{kilnID}
+#    get:
+#    put:
+#    delete:
+#  /kiln/{kilnID}/log
+#    get:
+#    post:
+#  /kilns
+#    get:
+definitions:
+  Firing:
+    type: object
+    properties:
+        firingID:
+          description: The ID of the firing to be retrieved
+          type: integer
+          format: int64
+        kilnID:
+          description: The ID of the kiln the firing is/was in
+          type: integer
+          format: int32
+        firingPlanID:
+          description: The ID of the firing plan to be used.
+          type: integer
+          format: int32
+        userID:
+          description: The ID of the user firing the kiln.
+          type: integer
+          format: int32
+        maxTemp:
+          description: The maximum temperature the kiln will fire to
+          type: integer
+          format: int32
+        openTemp:
+          description: |
+            The temperature below which the kiln can be opened and emptied.
+          type: integer
+          format: int32
+        startTimeExpected:
+          description: The time the firing is expected to start.
+          type: string
+          format: date-time
+        startTimeActual:
+          description: The time the firing actually started.
+          type: string
+          format: date-time
+        endTimeExpected:
+          description: |
+            The expected time the kiln will stop firing (i.e. when it
+            reaches temperature and starts cooling)
+          type: string
+          format: date-time
+        endTimeActual:
+          description: |
+            The actual time the kiln stopped firing (i.e. when it reached
+            temperature and starts cooling)
+          type: string
+          format: date-time
+        openTimeExpected:
+          description: |
+            The expected time the kiln can be opened and unpacked.
+            unpacking.
+          type: string
+          format: date-time
+        openTimeActual:
+          description: |
+            The time the kiln was opened for unpacking.
+          type: string
+          format: date-time
+        shareableSpace:
+          description: |
+            Percentage of the kilns packing space available for others to use
+          type: number
+          format: float
+        kilnStatus:
+          description: |
+            Status of -1 = error, firing - 0 = packing, 1 = heating, 2 = cooling, 3 = cooled, 4 = open
+          type: integer
+          format: int32
+        firingStatus:
+          description: |
+            Status of firing [
+              -1 = error,
+              0 = not started,
+              1 = heating (as expected),
+              2 = heating (below expected),
+              3 = heating (above expected),
+              4 = success (on target),
+              5 = ended (below target),
+              6 = ended (above target),
+              7 = opened above {openTemp}
+            ]
+          type: integer
+          format: int32
+  FiringLogEntry:
+    type: object
+    properties:
+      entryID:
+        description: ID of log entry
+        type: integer
+        format: int32
+      seconds:
+        description: seconds since start of firing
+        type: integer
+        format: int32
+      type:
+        description: |
+          Type of log entry [
+            -1 = error,
+            0 = firingDetails,
+            1 = temperature,
+            2 = power/fuel,
+            3 = door,
+            4 = bungs,
+            5 = damper,
+            6 = primary air,
+            7 = other
+          ]
+        type: integer
+        format: int32
+      subType:
+        description: Sub-Type of log entry (kiln specific info or firing details)
+        type: string
+      value:
+        description: Value of entry
+        type: string
+  FiringLog:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int32
+        description: Total number of items available.
+      limit:
+        type: integer
+        format: int32
+        description: Number of items to retrieve (100 max).
+      offset:
+        type: integer
+        format: int32
+        description: Position in pagination.
+      entries:
+        type: array
+        items:
+          $ref: '#/definitions/FiringLogEntry'
+  FiringList:
+    type: object
+    properties:
+      parameters:
+        kilnID:
+          description: The I-D of the kiln the firing is was in
+          type: integer
+          format: int32
+        userID:
+          description: ID of the user making the request
+          type: integer
+          format: int32
+        firingPlanID:
+          description: The ID of the firing plan to be used.
+          type: integer
+          format: int32
+        openTemp:
+          description: |
+            The temperature below which the kiln can be opened and
+            emptied.
+          type: integer
+          format: int32
+        maxTemp:
+          description: |
+            The maximum firing temperature
+          type: integer
+          format: int32
+        count:
+          type: integer
+          format: int32
+          description: Total number of items available.
+        limit:
+          type: integer
+          format: int32
+          description: Number of items to retrieve (100 max).
+        offset:
+          type: integer
+          format: int32
+          description: Position in pagination.
+        approved:
+          description: Has the firing been approved
+          type: boolean
+        approvedTime:
+          description: Has the firing been approved
+          type: string
+          format: date-time
+        approverID:
+          description: userID of approver
+          type: integer
+          format: int32
+        status:
+          description: Status of firing
+          type: integer
+          format: int32
+  FiringListTimes:
+    type: object
+    properties:
+        startTime:
+          description: The time the firing is expected to start.
+          type: string
+          format: date-time
+        endTime:
+          description: The time the firing is expected to start.
+          type: string
+          format: date-time
+        during:
+          description: The time the firing is expected to start.
+          type: string
+          format: date-time
+        before:
+          description: |
+            If start/end/approved time is used, returned items must start/end/approved
+            before specified time
+          type: boolean
+        after:
+          description: |
+            If start/end/approved time is used, returned items must start/end/approved
+            after specified time
+          type: boolean
+  FiringListResult:
+    type: object:
+    properties:
+      kiln:
+        schema:
+          type: object
+          items:
+            $ref: '#/definitions/basicKilnItem'
+      user:
+        schema:
+          type: object
+          items:
+            $ref: '#/definitions/basicUserItem'
+      details:
+        schema:
+          type: object
+          items:
+            $ref: '#/definitions/basicFiringItem'
+
+  Kiln:
+    type: object
+    properties:
+      kilnID:
+        type: integer
+        format: int32
+        description: UID for kiln
+      kilnName:
+        type: string
+        description: Name of the kiln.
+      code:
+        type: string
+        description: code for the kiln.
+      brandID:
+        type: integer
+        format: int32
+        description: UID of the maker of the kiln
+      packingType:
+        type: integer
+        format: int32
+        description: |
+          type of kiln [
+            0 = front door,
+            1 = trolly,
+            2 = top hat,
+            3 = coffin/top-loading
+          ]
+      primaryFiringType:
+        type: integer
+        format: int32
+        description: |
+          type of firings this kiln is built for [
+            0 = oxidation,
+            1 = bisque,
+            2 = glaze,
+            3 = raku,
+            4 = black firing,
+            5 = salt glaze
+          ]
+      fuel:
+        type: integer
+        format: int32
+        description: |
+          type of fuel the kiln uses [
+            1 = electric (single phase),
+            2 = electric (three phase),
+          	3 = gas,
+          	4 = wood,
+          	5 = oil
+          ]
+      fuelSub:
+        type: string
+        description: Subtype of fuel if appropriate
+      lining:
+        type: string
+        description: the material the kiln is lined with (insulation)
+      packingVolume:
+        type: integer
+        format: int32
+        description: packing volume of the kiln (in cubic metres)
+      internalWidth:
+        type: integer
+        format: int32
+        description: Width of the inside of the kiln (in millimetres)
+      internalDepth:
+        type: integer
+        format: int32
+        description: depth of the inside of the kiln (in millimetres)
+      internalHeight:
+        type: integer
+        format: int32
+        description: height of the inside of the kiln (in Millimetres)
+      doorWidth:
+        type: integer
+        format: int32
+        description: width of the door opening (in millimetres)
+      doorHeight:
+        type: integer
+        format: int32
+        description: height of the door opening (in millimetres)
+      doorOpeningOffsetX:
+        type: integer
+        format: int32
+        description: opening offset from the hinge side of the door (in millimetres)
+      doorOpeningOffsetY:
+        type: integer
+        format: int32
+        description: opening offset from the bottom of the door (in millimetres)
+      ceilingArchRadius:
+        type: integer
+        format: int32
+        description: radius of the arch of the ceiling of the kiln (in millimetres) (0 for kilns with a flat ceiling)
+      maxTemp:
+        type: integer
+        format: int32
+        description: maximum temperature the kiln can be fired to
+  kilnLog:
+    type: object
+    properties:
+      kilnID:
+        type: integer
+        format: int32
+        description: Unique ID for kiln
+      dateTime:
+        type: string
+        format: date-time
+        description: blah blah
+      type:
+        type: integer
+        format: int32
+        description: Unique ID for kiln
+      subType:
+        type: string
+        description: Unique ID for kiln
+      value:
+        type: string
+        description: blah blah
+  BasicKilnItem:
+    type: object
+    porperties:
+      id:
+        type: integer
+        format: int32
+      name:
+        type: string
+        description: Name of the kiln.
+      code:
+        type: string
+        description: code for the kiln.
+      url:
+        type: string
+        description: URL for the kiln
+  BasicUserItem:
+    type: object
+    porperties:
+      id:
+        type: integer
+        format: int32
+      name:
+        type: string
+        description: Name of the kiln.
+      url:
+        type: string
+        description: URL for the kiln
+      type:
+        type: string
+        description: type of user
+  BasicFiringItem:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int32
+      url:
+        type: string
+        description: URL for the firing details
+      startTime:
+        type: string
+        format: date-time
+        description: Name of the kiln.
+      endTime:
+        type: string
+        format: date-time
+        description: Name of the kiln.
+      openTime:
+        type: string
+        format: date-time
+        description: Name of the kiln.
+      firingPlan:
+        schema:
+          type: object
+          $ref: '#/definitions/basicFiringPlanItem'
+  BasicFiringPlanItem:
+    type: object
+      id:
+        type: integer
+        format: int32
+      url:
+        type: string
+        description: URL for the firing plan details
+      name:
+        type: string
+        description: Name of the firing plan.
+      description:
+        type: string
+        description: description of the firing plan
+      type:
+        type: string
+        description: Type of firing
+      duration:
+        type: integer
+        format: int32
+        description: Number of seconds the firing (heating) takes
+      maxTemp:
+        type: integer
+        format: int32
+        description: Maximum temperature the kiln was fired to
+
+
+  Error:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields:
+        type: string
